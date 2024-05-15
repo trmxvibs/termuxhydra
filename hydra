@@ -1,0 +1,139 @@
+#!/bin/bash
+
+# Function to display messages with colors
+display_message() {
+    echo "$1" | lolcat -a -d 15 -s 15 -t
+}
+
+# Function to check and remove existing Hydra files
+remove_existing_hydra() {
+    display_message "Checking for existing Hydra files..."
+    # Check for Hydra binary in all Termux directories
+    hydra_files=$(find /data/data/com.termux/files -name "hydra" 2>/dev/null)
+    if [ -n "$hydra_files" ]; then
+        display_message "Removing existing Hydra files..."
+        rm -f $hydra_files
+    else
+        display_message "No existing Hydra files found."
+    fi
+}
+
+# Function to install required packages
+install_packages() {
+    packages=("git" "make" "clang" "openssl" "pkg-config")
+    for pkg in "${packages[@]}"; do
+        if ! command -v $pkg &>/dev/null; then
+            display_message "Installing $pkg..."
+            pkg install $pkg -y
+            if [ $? -ne 0 ]; then
+                display_message "Error: Failed to install $pkg. Exiting." && exit 1
+            fi
+        else
+            display_message "$pkg is already installed."
+        fi
+    done
+}
+
+# Function to clone Hydra repository and install
+install_hydra() {
+    display_message "Cloning Hydra repository..."
+    cd $HOME
+    git clone https://github.com/vanhauser-thc/thc-hydra
+    cd thc-hydra
+
+    display_message "Preparing device for installing Hydra..."
+    ./configure
+    make
+    make install
+
+    # Create symbolic link to hydra binary in /data/data/com.termux/files/usr/bin
+    ln -sf "$(pwd)/hydra" /data/data/com.termux/files/usr/bin/hydra
+}
+
+# Function to install speedtest-go and check network speed
+check_network_speed() {
+    display_message "Installing speedtest-go..."
+    go get github.com/zpeters/speedtest
+    speed=$(speedtest 2>/dev/null | grep "Download" | awk '{print $2}')
+    display_message "Network Speed: $speed"
+}
+
+# Function to check if user is subscribed to the YouTube channel
+check_subscription() {
+    subscribed=false
+    while [ "$subscribed" != "true" ]; do
+        read -p "Have you subscribed to my YouTube channel 'termux_vibes' (yes/no)? " response
+        case $response in
+            [yY][eE][sS]|[yY])
+                display_message "Redirecting you to my YouTube channel..."
+                termux-open "https://www.youtube.com/channel/UC2MKFsqqSNX-ZGgb8pUKAKQ?sub_confirmation=1"
+                subscribed=true
+                ;;
+            [nN][oO]|[nN])
+                display_message "Redirecting you to my YouTube channel..."
+                termux-open "https://www.youtube.com/channel/UC2MKFsqqSNX-ZGgb8pUKAKQ"
+                subscribed=true
+                ;;
+            *)
+                display_message "Please answer yes or no."
+                ;;
+        esac
+    done
+}
+
+# Function to display loading bar
+display_loading_bar() {
+    for ((i=0; i<60; i++)); do
+        echo -ne "Confirming Subscription: ["
+        for ((j=0; j<i; j++)); do
+            echo -ne "="
+        done
+        echo -ne ">"
+        for ((k=i+1; k<60; k++)); do
+            echo -ne " "
+        done
+        echo -ne "] ($((i+1))s)\r"
+        sleep 1
+    done
+    echo ""
+}
+
+# Main function
+main() {
+    clear
+    display_message "Hi Everyone!"
+    display_message "This tool was made by Lokesh Kumar (Termux_vibes)."
+    display_message "I'm a learner, not a copy paster."
+    display_message "Please subscribe to my YouTube channel 'termux_vibes' for more updates."
+
+    # Ask user to subscribe to the YouTube channel
+    check_subscription
+
+    # Check and remove existing Hydra files
+    remove_existing_hydra
+
+    # Update system
+    display_message "Updating package list..."
+    pkg update
+
+    # Install required packages
+    install_packages
+
+    # Install Hydra
+    install_hydra
+
+    # Check network speed
+    check_network_speed
+
+    # Display loading bar
+    display_loading_bar
+
+    # Final messages
+    clear
+    display_message "Hydra installation completed successfully."
+    display_message "You can now use Hydra by typing 'hydra' from any directory."
+    display_message "For more information, visit: https://github.com/vanhauser-thc/thc-hydra"
+}
+
+# Execute the main function
+main

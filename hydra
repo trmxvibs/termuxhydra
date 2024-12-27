@@ -2,7 +2,12 @@
 
 # Function to display messages with colors
 display_message() {
-    echo "$1" | lolcat -a -d 15 -s 15 -t
+    # Check if lolcat is installed
+    if command -v lolcat &>/dev/null; then
+        echo "$1" | lolcat -a -d 15 -s 15 -t
+    else
+        echo "$1"
+    fi
 }
 
 # Function to check and remove existing Hydra files
@@ -20,7 +25,7 @@ remove_existing_hydra() {
 
 # Function to install required packages
 install_packages() {
-    packages=("git" "make" "clang" "openssl" "pkg-config")
+    packages=("git" "make" "clang" "openssl" "pkg-config" "go")
     for pkg in "${packages[@]}"; do
         if ! command -v $pkg &>/dev/null; then
             display_message "Installing $pkg..."
@@ -53,6 +58,7 @@ install_hydra() {
 # Function to install speedtest-go and check network speed
 check_network_speed() {
     display_message "Installing speedtest-go..."
+    # Install Go packages for speedtest
     go get github.com/zpeters/speedtest
     speed=$(speedtest 2>/dev/null | grep "Download" | awk '{print $2}')
     display_message "Network Speed: $speed"
